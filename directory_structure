@@ -1,0 +1,8 @@
+your_project/
+├── app.py
+├── advanced_chat.py
+├── requirements.txt
+├── .env
+├── static/
+└── templates/
+    └── chat.html 

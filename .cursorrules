@@ -1,0 +1,123 @@
+LangChain Python Inference Backend AI Rules
+You are an expert in Python, LangChain, and scalable AI application development.
+
+Key Principles
+Provide a concise, technical response with accurate Python example code using LangChain v0.2.
+Prioritize functional and declarative programming, and avoid classes whenever possible.
+Use LangChain Expression Language (LCEL) for chain implementation.
+Use descriptive variable names, for example: is_retrieval_enabled, has_context.
+Directory and file names use lowercase letters and underscores, for example: chains/rag_chain.py.
+Linkers, retrievers, and utility functions should prefer named exports.
+If you are unsure about the LangChain module, you can refer to the concept guide .
+
+
+
+LangChain/Python
+Use 'def' for pure functions and 'async def' for asynchronous operations.
+All function signatures are type-hinted. For input validation, Pydantic v1 models are used.
+Avoid unnecessary parentheses in conditional statements.
+For single-line statements in conditionals, use concise syntax (e.g., 'if condition: return result').
+By default 'python-dotenv' is used to load environment variables.
+Make sure to use the structure of the LangChain 0.2 library:
+Import common data structures from 'langchain_core' instead of from 'langchain'.
+Example: from langchain_core.prompts import PromptTemplate
+Error handling and validation
+Prioritize error handling and edge cases:
+
+Handle errors and edge cases at the beginning of the function.
+Use early returns for error conditions to avoid deeply nested if statements.
+Put the happy path at the end of the function to improve readability.
+Avoid unnecessary else statements; use the if-return pattern instead.
+Use guard clauses to handle preconditions and invalid conditions early.
+Implement proper error logging and user-friendly error messages.
+Use custom error types or error factories for consistent error handling.
+Dependencies
+Core dependencies:
+
+langchain
+langchain-community
+langchain-core
+langgraph
+python-dotenv
+Optional dependencies (included only if used):
+
+langserve (for building RESTful services)
+faiss-cpu (for vector storage in RAG)
+tavily-python (for Tavily search integration)
+unstructured (for document parsing)
+Environment variables
+Use python-dotenvto load environment variables.
+.env.exampleInclude all required environment variables in :
+OPENAI_API_KEYand OPENAI_API_BASEfor OpenAI compatible models
+LANGCHAIN_TRACINGV2="true"Used to enable LangSmith tracing
+LANGCHAIN_PROJECT="YOUR_PROJECTNAME"For LangSmith project names
+LANGCHAIN_API_KEY="YOUR_API_KEY"For LangSmith API access
+TAVILY_API_KEY="YOUR_API_KEY"(Only when searching with Tavily)
+Add any other necessary API keys or configuration variables
+LangChain Specific Guidelines
+Use LCEL to implement the chain, refer to the LCEL cheat sheet .
+Use Pydantic v1 models for input validation and responsive patterns.
+Use declarative chain definitions with clear return type annotations.
+Prefer transparent LCEL chains over pre-built black-box components.
+Use asynchronous functions and caching strategies to optimize performance.
+Use LangGraph to build stateful multi-actor applications with LLM.
+Implement proper error handling for LLM API calls and chain executions.
+Model Usage
+First consider using 'langchain-openai' for OpenAI and OpenAI compatible models.
+Make 'gpt-4o-mini' the default OpenAI chat model.
+If you are not using OpenAI or compatible models, consider using standalone vendor packages for model integration.
+Always check for the existence of required environment variables before initializing a model.
+For tool calls and structured output, refer to the supported models and use the appropriate method.
+Performance Optimization
+Minimize blocking I/O operations; use asynchronous operations for all LM API calls and external requests.
+Implement caching for frequently accessed data and LLM responses.
+Optimize tip template and chain structure to improve token usage efficiency.
+Use streaming responses for long-running LLM tasks.
+Implement streaming in the main function for better testing and real-time output.
+Chain Implementation
+Always try chain implementation using LCEL first.
+If you are considering a legacy chain, use its LCEL equivalent according to the migration guide.
+LLMChain migration
+ConversationalChain migration
+RetrievalQA migration
+ConversationalRetrievalChain migration
+StuffDocumentsChain migration
+MapReduceDocumentsChain migration
+MapRerankDocumentsChain migration
+RefineDocumentsChain migration
+LLMRouterChain migration
+MultiPromptChain migration
+LLMMathChain migration
+ConstitutionalChain migration
+For document loading and parsing in chains and proxies, use unstructuredthe library (included in dependencies) if needed.
+Do not place a main function in a chain or proxy file. Use main.pyas the entry point of your application.
+RAG (Enhanced Generative Search)
+Follow the RAG tutorial for implementation guidelines for vector storage:
+Use FAISS whenever possible (include faiss-cpu in your dependencies).
+If FAISS is not applicable, consider other vector storage .
+For the retriever, note that it returns a list of documents that may require further processing, format_docs()e.g.
+Before considering pre-built black-box retrievers, first implement a transparent LCEL chain.
+Agent Implementation
+Use LangGraph to build stateful multi-actor applications with LLM.
+
+For simple ReAct agents, use the pre-built ReAct agents .
+For complex proxies, implement LangGraph workflows. When using tools in LangChain or LangGraph:
+When tools are needed, tool nodes are prioritized .
+Where applicable, use Tavily as the primary search tool (include tavily-python in the dependencies).
+Implement structured output for compatible models . For complex control flows, consider the following approaches:
+Create a subgraph .
+Creating Branches for Parallel Execution Create branches for parallel execution .
+Create map-reduce branches for parallel execution Create map-reduce branches for parallel execution .
+Correctly control recursion limits in graphs .
+Create a langgraph.jsonmanifest file to configure the proxy for compatibility with LangGraph Studio. Do not place a main function in the proxy file. Use main.pyas the entry point for your application.
+Chatbot Implementation
+Refer to the chatbot tutorial to implement the function.
+Use an in-memory component to maintain the session context.
+Implement proper input validation and output formatting for the chat interface.
+LangServe Integration
+Use LangServe to create a RESTful interface for the inference logic.
+Follow LangServe's best practices to build and deploy LangChain applications.
+Implement proper error handling and input validation in the LangServe endpoint.
+Create test cases using LangServe Soak to ensure endpoints are functional.
+Consider using LangServe's built-in playground for interactive testing and demonstrations.
+If necessary, add custom middleware for logging, CORS, or authentication.

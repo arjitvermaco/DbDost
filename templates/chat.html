@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-commerce Database Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: calc(100vh - 200px);
+        }
+        .message {
+            margin: 10px;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: 20%;
+        }
+        .bot-message {
+            background-color: #f5f5f5;
+            margin-right: 20%;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
+        .disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-3xl font-bold">E-commerce Database Chat</h1>
+            <button onclick="clearChat()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+                Clear Chat
+            </button>
+        </div>
+        
+        <div class="flex space-x-4 mb-4">
+            <button onclick="showSchema()" id="schema-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                Show Schema
+            </button>
+            <button onclick="showSampleQueries()" id="samples-btn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                Sample Queries
+            </button>
+        </div>
+
+        <div id="chat-messages" class="bg-white rounded-lg shadow-lg p-4 chat-container overflow-y-auto mb-4">
+            <div class="bot-message">
+                Welcome! Ask me anything about the e-commerce database.
+            </div>
+        </div>
+
+        <div class="flex space-x-2">
+            <input type="text" id="query-input" 
+                   class="flex-1 p-2 border rounded-lg"
+                   placeholder="Type your question here..."
+                   onkeypress="handleKeyPress(event)">
+            <button onclick="sendQuery()" id="send-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg">
+                Send
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let isProcessing = false;
+
+        function setProcessingState(processing) {
+            isProcessing = processing;
+            const buttons = ['send-btn', 'schema-btn', 'samples-btn'];
+            const input = document.getElementById('query-input');
+            
+            buttons.forEach(btnId => {
+                const btn = document.getElementById(btnId);
+                if (processing) {
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                } else {
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                }
+            });
+            
+            input.disabled = processing;
+            input.classList.toggle('bg-gray-100', processing);
+        }
+
+        function addLoadingMessage() {
+            const messagesDiv = document.getElementById('chat-messages');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message bot-message';
+            loadingDiv.id = 'loading-message';
+            loadingDiv.innerHTML = '<div class="flex items-center"><span>AI is thinking</span><span class="loading-dots"></span></div>';
+            messagesDiv.appendChild(loadingDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function removeLoadingMessage() {
+            const loadingMessage = document.getElementById('loading-message');
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+        }
+
+        async function sendQuery() {
+            if (isProcessing) return;
+
+            const input = document.getElementById('query-input');
+            const query = input.value.trim();
+            
+            if (!query) return;
+            
+            // Add user message
+            addMessage(query, 'user');
+            input.value = '';
+
+            try {
+                setProcessingState(true);
+                addLoadingMessage();
+
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query }),
+                });
+
+                const data = await response.json();
+                removeLoadingMessage();
+                addMessage(data.result, 'bot');
+            } catch (error) {
+                removeLoadingMessage();
+                addMessage('Sorry, there was an error processing your request.', 'bot');
+            } finally {
+                setProcessingState(false);
+            }
+        }
+
+        function addMessage(text, sender) {
+            const messagesDiv = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.innerHTML = `<pre>${text}</pre>`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function clearChat() {
+            const messagesDiv = document.getElementById('chat-messages');
+            // Remove all messages except the welcome message
+            while (messagesDiv.childNodes.length > 1) {
+                messagesDiv.removeChild(messagesDiv.lastChild);
+            }
+            // Clear the input field
+            document.getElementById('query-input').value = '';
+        }
+
+        async function showSchema() {
+            if (isProcessing) return;
+            
+            try {
+                setProcessingState(true);
+                addLoadingMessage();
+                
+                const response = await fetch('/schema');
+                const data = await response.json();
+                removeLoadingMessage();
+                addMessage('Database Schema:\n' + data.schema, 'bot');
+            } catch (error) {
+                removeLoadingMessage();
+                addMessage('Error fetching schema.', 'bot');
+            } finally {
+                setProcessingState(false);
+            }
+        }
+
+        async function showSampleQueries() {
+            if (isProcessing) return;
+            
+            try {
+                setProcessingState(true);
+                addLoadingMessage();
+                
+                const response = await fetch('/sample-queries');
+                const data = await response.json();
+                removeLoadingMessage();
+                const queriesText = 'Sample Queries:\n' + data.queries.join('\n');
+                addMessage(queriesText, 'bot');
+            } catch (error) {
+                removeLoadingMessage();
+                addMessage('Error fetching sample queries.', 'bot');
+            } finally {
+                setProcessingState(false);
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !isProcessing) {
+                sendQuery();
+            }
+        }
+    </script>
+</body>
+</html> 

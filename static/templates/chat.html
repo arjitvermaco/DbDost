@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-commerce Database Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: calc(100vh - 200px);
+        }
+        .message {
+            margin: 10px;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: 20%;
+        }
+        .bot-message {
+            background-color: #f5f5f5;
+            margin-right: 20%;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-4">E-commerce Database Chat</h1>
+        
+        <div class="flex space-x-4 mb-4">
+            <button onclick="showSchema()" class="bg-blue-500 text-white px-4 py-2 rounded">
+                Show Schema
+            </button>
+            <button onclick="showSampleQueries()" class="bg-green-500 text-white px-4 py-2 rounded">
+                Sample Queries
+            </button>
+        </div>
+
+        <div id="chat-messages" class="bg-white rounded-lg shadow-lg p-4 chat-container overflow-y-auto mb-4">
+            <div class="bot-message">
+                Welcome! Ask me anything about the e-commerce database.
+            </div>
+        </div>
+
+        <div class="flex space-x-2">
+            <input type="text" id="query-input" 
+                   class="flex-1 p-2 border rounded-lg"
+                   placeholder="Type your question here..."
+                   onkeypress="handleKeyPress(event)">
+            <button onclick="sendQuery()" class="bg-blue-500 text-white px-6 py-2 rounded-lg">
+                Send
+            </button>
+        </div>
+    </div>
+
+    <script>
+        async function sendQuery() {
+            const input = document.getElementById('query-input');
+            const query = input.value.trim();
+            
+            if (!query) return;
+            
+            // Add user message
+            addMessage(query, 'user');
+            input.value = '';
+
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query }),
+                });
+
+                const data = await response.json();
+                addMessage(data.result, 'bot');
+            } catch (error) {
+                addMessage('Sorry, there was an error processing your request.', 'bot');
+            }
+        }
+
+        function addMessage(text, sender) {
+            const messagesDiv = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.innerHTML = `<pre>${text}</pre>`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function showSchema() {
+            try {
+                const response = await fetch('/schema');
+                const data = await response.json();
+                addMessage('Database Schema:\n' + data.schema, 'bot');
+            } catch (error) {
+                addMessage('Error fetching schema.', 'bot');
+            }
+        }
+
+        async function showSampleQueries() {
+            try {
+                const response = await fetch('/sample-queries');
+                const data = await response.json();
+                const queriesText = 'Sample Queries:\n' + data.queries.join('\n');
+                addMessage(queriesText, 'bot');
+            } catch (error) {
+                addMessage('Error fetching sample queries.', 'bot');
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendQuery();
+            }
+        }
+    </script>
+</body>
+</html> 
