@@ -22,9 +22,17 @@
             background-color: #f5f5f5;
             margin-right: 20%;
         }
-        pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
+        .sql-block {
+            background-color: #1a1a1a;
+            color: #fff;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            margin: 0.5rem 0;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin: 0.5rem 0;
         }
         .loading-dots::after {
             content: '';
@@ -39,6 +47,53 @@
         .disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+        .thought-process {
+            background-color: #f8f9fa;
+            border-left: 4px solid #4a5568;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+        }
+        
+        .thought-process-title {
+            color: #4a5568;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .agent-step {
+            border-left: 3px solid #4a5568;
+            margin: 8px 0;
+            padding: 8px 16px;
+        }
+        
+        .step-action {
+            color: #2563eb;
+            font-weight: bold;
+        }
+        
+        .step-input {
+            color: #4b5563;
+            margin: 4px 0;
+        }
+        
+        .step-observation {
+            background-color: #f3f4f6;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 4px 0;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .final-answer {
+            background-color: #e0f2fe;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 12px;
+            border-left: 4px solid #0ea5e9;
         }
     </style>
 </head>
@@ -117,6 +172,141 @@
             }
         }
 
+        function formatTableData(content) {
+            // Convert ASCII table to HTML table
+            const lines = content.split('\n');
+            let html = '<div class="table-container"><table class="min-w-full divide-y divide-gray-200">';
+            
+            // Header
+            const headerRow = lines[0].split('|').map(cell => cell.trim()).filter(cell => cell);
+            html += '<thead class="bg-gray-50"><tr>';
+            headerRow.forEach(cell => {
+                html += `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${cell}</th>`;
+            });
+            html += '</tr></thead><tbody class="bg-white divide-y divide-gray-200">';
+            
+            // Data rows
+            lines.slice(2).forEach(line => {
+                if (line.includes('|')) {
+                    const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
+                    html += '<tr>';
+                    cells.forEach(cell => {
+                        html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${cell}</td>`;
+                    });
+                    html += '</tr>';
+                }
+            });
+            
+            html += '</tbody></table></div>';
+            return html;
+        }
+
+        function formatSQLQuery(query) {
+            return `<div class="sql-block">
+                <div class="text-xs text-gray-400 mb-1">SQL Query:</div>
+                <code>${query}</code>
+            </div>`;
+        }
+
+        function formatSchemaInfo(content) {
+            return `<div class="space-y-2">
+                <div class="font-bold text-lg">Database Schema</div>
+                <pre class="bg-gray-800 text-white p-4 rounded-lg overflow-x-auto">${content}</pre>
+            </div>`;
+        }
+
+        function formatSampleQueries(queries) {
+            return `<div class="space-y-2">
+                <div class="font-bold text-lg">Sample Queries</div>
+                <ul class="list-disc list-inside space-y-1">
+                    ${queries.map(q => `<li class="text-gray-700">${q}</li>`).join('')}
+                </ul>
+            </div>`;
+        }
+
+        function formatThoughtProcess(thoughts) {
+            console.log("Formatting thought process:", thoughts); // Debug log
+            
+            if (!thoughts || !thoughts.steps) {
+                return '';
+            }
+            
+            let stepsHtml = thoughts.steps.map(step => {
+                let stepHtml = `
+                    <div class="agent-step">
+                        <div class="step-action">🤔 ${step.action}</div>
+                `;
+                
+                if (step.input) {
+                    stepHtml += `<div class="step-input">📥 Input: ${step.input}</div>`;
+                }
+                
+                if (step.observation) {
+                    stepHtml += `<div class="step-observation">📋 Result: ${step.observation}</div>`;
+                }
+                
+                stepHtml += '</div>';
+                return stepHtml;
+            }).join('');
+
+            let finalAnswer = thoughts.final_answer ? `
+                <div class="final-answer">
+                    <div class="font-bold mb-2">🎯 Final Answer:</div>
+                    <div>${thoughts.final_answer}</div>
+                </div>
+            ` : '';
+
+            return `
+                <div class="thought-process">
+                    <div class="thought-process-title">AI Reasoning Steps:</div>
+                    ${stepsHtml}
+                    ${finalAnswer}
+                </div>
+            `;
+        }
+
+        function addMessage(response, sender) {
+            console.log("Adding message:", response); // Debug log
+            
+            const messagesDiv = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+
+            if (sender === 'user') {
+                messageDiv.innerHTML = `<pre>${response}</pre>`;
+            } else {
+                let content = '';
+                
+                // Add thought process if available
+                if (response.thought_process) {
+                    content += formatThoughtProcess(response.thought_process);
+                }
+                
+                if (response.type === 'table') {
+                    if (response.sql_query) {
+                        content += formatSQLQuery(response.sql_query);
+                    }
+                    content += formatTableData(response.content);
+                } else if (response.type === 'sql') {
+                    if (response.sql_query) {
+                        content += formatSQLQuery(response.sql_query);
+                    }
+                    content += `<div class="mt-2">${response.content}</div>`;
+                } else if (response.type === 'schema') {
+                    content += formatSchemaInfo(response.content);
+                } else if (response.type === 'sample_queries') {
+                    content += formatSampleQueries(response.content);
+                } else {
+                    content += `<pre>${response.content}</pre>`;
+                }
+                
+                messageDiv.innerHTML = content;
+            }
+
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
         async function sendQuery() {
             if (isProcessing) return;
 
@@ -125,7 +315,6 @@
             
             if (!query) return;
             
-            // Add user message
             addMessage(query, 'user');
             input.value = '';
 
@@ -143,22 +332,16 @@
 
                 const data = await response.json();
                 removeLoadingMessage();
-                addMessage(data.result, 'bot');
+                addMessage(data, 'bot');
             } catch (error) {
                 removeLoadingMessage();
-                addMessage('Sorry, there was an error processing your request.', 'bot');
+                addMessage({
+                    type: 'error',
+                    content: 'Sorry, there was an error processing your request.'
+                }, 'bot');
             } finally {
                 setProcessingState(false);
             }
-        }
-
-        function addMessage(text, sender) {
-            const messagesDiv = document.getElementById('chat-messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}-message`;
-            messageDiv.innerHTML = `<pre>${text}</pre>`;
-            messagesDiv.appendChild(messageDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
         function clearChat() {
@@ -181,10 +364,13 @@
                 const response = await fetch('/schema');
                 const data = await response.json();
                 removeLoadingMessage();
-                addMessage('Database Schema:\n' + data.schema, 'bot');
+                addMessage(data, 'bot');
             } catch (error) {
                 removeLoadingMessage();
-                addMessage('Error fetching schema.', 'bot');
+                addMessage({
+                    type: 'error',
+                    content: 'Error fetching schema.'
+                }, 'bot');
             } finally {
                 setProcessingState(false);
             }
@@ -200,11 +386,13 @@
                 const response = await fetch('/sample-queries');
                 const data = await response.json();
                 removeLoadingMessage();
-                const queriesText = 'Sample Queries:\n' + data.queries.join('\n');
-                addMessage(queriesText, 'bot');
+                addMessage(data, 'bot');
             } catch (error) {
                 removeLoadingMessage();
-                addMessage('Error fetching sample queries.', 'bot');
+                addMessage({
+                    type: 'error',
+                    content: 'Error fetching sample queries.'
+                }, 'bot');
             } finally {
                 setProcessingState(false);
             }
